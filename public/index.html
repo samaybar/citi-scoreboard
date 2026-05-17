@@ -194,8 +194,20 @@
   .footer {
     text-align: center; padding: 10px;
     color: var(--dim); font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    gap: 14px; flex-wrap: wrap;
   }
   .footer a { color: var(--orange); text-decoration: none; }
+  .live-btn {
+    font-family: 'Saira Condensed', sans-serif; font-weight: 800;
+    font-size: 14px; letter-spacing: .03em;
+    background: #0d8a3e; color: #fff; border: none;
+    padding: 9px 18px; border-radius: 5px; cursor: pointer;
+  }
+  .live-btn:disabled { opacity: .55; cursor: default; }
+  .live-status { font-family: 'Saira Condensed', sans-serif; font-weight: 700; }
+  .live-status.err { color: var(--red); }
+  .live-status.ok { color: #46c46b; }
   @media (max-width: 760px) {
     .top { grid-template-columns: 1fr; }
     .art { min-height: 120px; }
@@ -295,8 +307,43 @@
       </div>
 
       <div class="strip">TRADE ETFs, STOCKS &amp; OPTIONS</div>
-      <div class="footer">Manual refresh to update &middot; <a href="/control">Control panel</a></div>
+      <div class="footer">
+        <button class="live-btn" id="liveBtn">Live refresh (Mets)</button>
+        <span class="live-status" id="liveStatus"></span>
+        <a href="/control">Control panel</a>
+      </div>
     `;
+    document.getElementById('liveBtn').addEventListener('click', liveRefresh);
+  }
+
+  function liveRefresh() {
+    const btn = document.getElementById('liveBtn');
+    const status = document.getElementById('liveStatus');
+    btn.disabled = true;
+    status.className = 'live-status';
+    status.textContent = 'Fetching from MLB\u2026';
+    fetch('/api/live', { method: 'POST' })
+      .then(async r => {
+        const d = await r.json();
+        if (!r.ok) {
+          status.className = 'live-status err';
+          status.textContent = d.error || 'Live refresh failed';
+          return;
+        }
+        render(d.state);
+        const s = document.getElementById('liveStatus');
+        s.className = 'live-status ok';
+        s.textContent = d.gameStatus + (d.cached ? ' (cached)' : '') +
+          ' \u00b7 ' + new Date().toLocaleTimeString();
+      })
+      .catch(() => {
+        status.className = 'live-status err';
+        status.textContent = 'Live refresh failed';
+      })
+      .finally(() => {
+        const b = document.getElementById('liveBtn');
+        if (b) b.disabled = false;
+      });
   }
 
   fetch('/api/state').then(r => r.json()).then(render).catch(e => {
