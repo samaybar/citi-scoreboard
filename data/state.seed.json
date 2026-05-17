@@ -1,0 +1,52 @@
+{
+  "away": {
+    "code": "NYY",
+    "name": "Yankees",
+    "innings": ["0", "0", "1", "0", "0", "4", "", "", ""],
+    "R": 5,
+    "H": 3,
+    "E": 0
+  },
+  "home": {
+    "code": "NYM",
+    "name": "Mets",
+    "innings": ["0", "0", "0", "1", "0", "", "", "", ""],
+    "R": 1,
+    "H": 7,
+    "E": 1
+  },
+  "count": { "balls": 1, "strikes": 1, "outs": 1 },
+  "bases": { "first": true, "second": false, "third": false },
+  "lineup": [
+    { "pos": "RF", "name": "Benge", "ops": ".649" },
+    { "pos": "SS", "name": "Bichette", "ops": ".526" },
+    { "pos": "DH", "name": "Soto", "ops": ".882" },
+    { "pos": "1B", "name": "Vientos", "ops": ".713" },
+    { "pos": "LF", "name": "Taylor", "ops": ".482" },
+    { "pos": "3B", "name": "Baty", "ops": ".648" },
+    { "pos": "2B", "name": "Semien", "ops": ".620" },
+    { "pos": "CF", "name": "Ewing", "ops": "1.043" },
+    { "pos": "C", "name": "Senger", "ops": ".000" }
+  ],
+  "currentBatterIndex": 6,
+  "batter": {
+    "number": "9",
+    "first": "A.J.",
+    "last": "Ewing",
+    "pos": "CF",
+    "hometown": "Kettering, OH",
+    "seasonHits": 3,
+    "seasonAtBats": 4,
+    "avg": ".294",
+    "hr": "1",
+    "rbi": "3",
+    "r": "4",
+    "obp": ".455",
+    "slg": ".588",
+    "ops": "1.043",
+    "sb": "2",
+    "walkupSong": "\"Poison\"",
+    "walkupArtist": "Bell Biv DeVoe"
+  },
+  "extra": { "MVR": "3", "ABS": "2", "exitVel": "" }
+}
