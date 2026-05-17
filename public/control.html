@@ -35,7 +35,6 @@
     padding:11px 22px; border:none; border-radius:5px; cursor:pointer; letter-spacing:.03em;
   }
   .save { background:var(--red); color:#fff; }
-  .live { background:#0d8a3e; color:#fff; }
   .reset { background:#1d4476; color:var(--ink); }
   .view { background:transparent; color:var(--orange,#f5821f); border:1px solid var(--line); text-decoration:none; display:inline-flex; align-items:center; }
   .msg { margin-left:auto; align-self:center; font-weight:700; font-family:'Saira Condensed'; }
@@ -46,11 +45,10 @@
 <body>
 <div class="wrap">
   <h1>Scoreboard Control</h1>
-  <small class="hint">Edit, Save, then refresh the display page. "Live refresh" pulls today's Mets score &amp; line from MLB and saves it immediately. Leave an inning blank if not yet played.</small>
+  <small class="hint">Edit, Save, then refresh the display page. Leave an inning blank if not yet played.</small>
   <div id="form">Loading…</div>
   <div class="bar">
     <button class="save" onclick="save()">Save changes</button>
-    <button class="live" onclick="liveRefresh()">Live refresh (Mets)</button>
     <button class="reset" onclick="resetState()">Reset to seed</button>
     <a class="view" href="/" target="_blank">Open display &#8599;</a>
     <span class="msg" id="msg"></span>
@@ -218,19 +216,6 @@ function resetState() {
   fetch('/api/reset', { method: 'POST' })
     .then(r => r.json()).then(() => location.reload())
     .catch(() => flash('Reset failed', false));
-}
-
-function liveRefresh() {
-  flash('Fetching from MLB\u2026', true);
-  fetch('/api/live', { method: 'POST' })
-    .then(async r => {
-      const d = await r.json();
-      if (!r.ok) { flash(d.error || 'Live refresh failed', false); return; }
-      state = d.state;
-      render();
-      flash('Live: ' + d.gameStatus + ' \u2014 saved \u2713', true);
-    })
-    .catch(() => flash('Live refresh failed', false));
 }
 
 fetch('/api/state').then(r => r.json()).then(s => { state = s; render(); })
