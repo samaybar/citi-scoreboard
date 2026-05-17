@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scoreboard Control</title>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@600;700;800&family=Saira:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root { --navy:#0a2342; --red:#e8262d; --line:#1d4476; --ink:#eaf1fb; --dim:#8fa9c8; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background:#04101f; color:var(--ink); font-family:'Saira',sans-serif; padding:20px; }
+  .wrap { max-width: 920px; margin: 0 auto; }
+  h1 { font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:30px; }
+  h2 {
+    font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:18px;
+    color:var(--red); margin:22px 0 10px; letter-spacing:.04em;
+  }
+  .card { background:var(--navy); border:1px solid var(--line); border-radius:6px; padding:16px; }
+  label { display:block; font-size:12px; color:var(--dim); font-weight:600; margin-bottom:3px; }
+  input {
+    width:100%; background:#06192f; border:1px solid var(--line); color:var(--ink);
+    padding:7px 9px; border-radius:4px; font-family:'Saira',sans-serif; font-size:15px;
+  }
+  input:focus { outline:none; border-color:var(--red); }
+  .grid { display:grid; gap:10px; }
+  .g2 { grid-template-columns:repeat(2,1fr); }
+  .g3 { grid-template-columns:repeat(3,1fr); }
+  .g4 { grid-template-columns:repeat(4,1fr); }
+  .innings { display:grid; grid-template-columns:repeat(9,1fr); gap:6px; }
+  .lineup-row { display:grid; grid-template-columns:64px 1fr 90px 40px; gap:8px; align-items:center; margin-bottom:6px; }
+  .lineup-row .bat { display:flex; align-items:center; justify-content:center; }
+  .bar { display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; position:sticky; bottom:0; padding:14px 0; background:#04101f; }
+  button {
+    font-family:'Saira Condensed',sans-serif; font-weight:800; font-size:15px;
+    padding:11px 22px; border:none; border-radius:5px; cursor:pointer; letter-spacing:.03em;
+  }
+  .save { background:var(--red); color:#fff; }
+  .reset { background:#1d4476; color:var(--ink); }
+  .view { background:transparent; color:var(--orange,#f5821f); border:1px solid var(--line); text-decoration:none; display:inline-flex; align-items:center; }
+  .msg { margin-left:auto; align-self:center; font-weight:700; font-family:'Saira Condensed'; }
+  .ok { color:#46c46b; } .err { color:var(--red); }
+  small.hint { color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Scoreboard Control</h1>
+  <small class="hint">Edit, Save, then refresh the display page. Leave an inning blank if not yet played.</small>
+  <div id="form">Loading…</div>
+  <div class="bar">
+    <button class="save" onclick="save()">Save changes</button>
+    <button class="reset" onclick="resetState()">Reset to seed</button>
+    <a class="view" href="/" target="_blank">Open display &#8599;</a>
+    <span class="msg" id="msg"></span>
+  </div>
+</div>
+<script>
+let state = null;
+
+function field(label, value, id) {
+  return `<div><label>${label}</label><input id="${id}" value="${(value ?? '').toString().replace(/"/g,'&quot;')}"></div>`;
+}
+
+function teamBlock(side, t) {
+  let inn = '';
+  for (let i = 0; i < 9; i++) {
+    inn += `<div><label>${i+1}</label><input id="${side}_inn_${i}" value="${(t.innings[i]||'').replace(/"/g,'&quot;')}"></div>`;
+  }
+  return `
+    <div class="card">
+      <div class="grid g2">
+        ${field('Team code', t.code, side+'_code')}
+        ${field('Team name', t.name, side+'_name')}
+      </div>
+      <label style="margin-top:10px">Innings 1&ndash;9</label>
+      <div class="innings">${inn}</div>
+      <div class="grid g3" style="margin-top:10px">
+        ${field('R', t.R, side+'_R')}
+        ${field('H', t.H, side+'_H')}
+        ${field('E', t.E, side+'_E')}
+      </div>
+    </div>`;
+}
+
+function render() {
+  const s = state;
+  let lineup = '';
+  s.lineup.forEach((p, i) => {
+    lineup += `
+      <div class="lineup-row">
+        <input id="lu_pos_${i}" value="${(p.pos||'').replace(/"/g,'&quot;')}">
+        <input id="lu_name_${i}" value="${(p.name||'').replace(/"/g,'&quot;')}">
+        <input id="lu_ops_${i}" value="${(p.ops||'').replace(/"/g,'&quot;')}">
+        <div class="bat"><input type="radio" name="curbat" value="${i}" ${i===s.currentBatterIndex?'checked':''}></div>
+      </div>`;
+  });
+  const b = s.batter;
+  document.getElementById('form').innerHTML = `
+    <h2>Away team</h2>${teamBlock('away', s.away)}
+    <h2>Home team</h2>${teamBlock('home', s.home)}
+
+    <h2>Count &amp; bases</h2>
+    <div class="card">
+      <div class="grid g3">
+        ${field('Balls', s.count.balls, 'balls')}
+        ${field('Strikes', s.count.strikes, 'strikes')}
+        ${field('Outs', s.count.outs, 'outs')}
+      </div>
+      <div class="grid g3" style="margin-top:10px">
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="b_first" style="width:auto" ${s.bases.first?'checked':''}> Runner on 1st</label>
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="b_second" style="width:auto" ${s.bases.second?'checked':''}> Runner on 2nd</label>
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="b_third" style="width:auto" ${s.bases.third?'checked':''}> Runner on 3rd</label>
+      </div>
+      <div class="grid g3" style="margin-top:10px">
+        ${field('MVR', s.extra.MVR, 'mvr')}
+        ${field('ABS', s.extra.ABS, 'abs')}
+        ${field('Exit velocity', s.extra.exitVel, 'exitvel')}
+      </div>
+    </div>
+
+    <h2>Batting order &mdash; pick the current batter</h2>
+    <div class="card">
+      <div class="lineup-row" style="color:var(--dim);font-size:12px;font-weight:700">
+        <div>POS</div><div>NAME</div><div>OPS</div><div>AT BAT</div>
+      </div>
+      ${lineup}
+    </div>
+
+    <h2>Batter card</h2>
+    <div class="card">
+      <div class="grid g4">
+        ${field('Number', b.number, 'bt_number')}
+        ${field('First name', b.first, 'bt_first')}
+        ${field('Last name', b.last, 'bt_last')}
+        ${field('Position', b.pos, 'bt_pos')}
+      </div>
+      <div class="grid g2" style="margin-top:10px">
+        ${field('Hometown', b.hometown, 'bt_hometown')}
+        <div class="grid g2">
+          ${field('Hits (game)', b.seasonHits, 'bt_hits')}
+          ${field('At-bats (game)', b.seasonAtBats, 'bt_ab')}
+        </div>
+      </div>
+      <div class="grid g4" style="margin-top:10px">
+        ${field('AVG', b.avg, 'bt_avg')}
+        ${field('HR', b.hr, 'bt_hr')}
+        ${field('RBI', b.rbi, 'bt_rbi')}
+        ${field('R', b.r, 'bt_r')}
+      </div>
+      <div class="grid g4" style="margin-top:10px">
+        ${field('OBP', b.obp, 'bt_obp')}
+        ${field('SLG', b.slg, 'bt_slg')}
+        ${field('OPS', b.ops, 'bt_ops')}
+        ${field('SB', b.sb, 'bt_sb')}
+      </div>
+      <div class="grid g2" style="margin-top:10px">
+        ${field('Walk-up song', b.walkupSong, 'bt_song')}
+        ${field('Walk-up artist', b.walkupArtist, 'bt_artist')}
+      </div>
+    </div>
+  `;
+}
+
+const v = id => document.getElementById(id).value;
+const n = id => { const x = parseInt(v(id), 10); return isNaN(x) ? 0 : x; };
+
+function collect() {
+  const team = side => ({
+    code: v(side+'_code'),
+    name: v(side+'_name'),
+    innings: Array.from({length:9}, (_,i) => v(side+'_inn_'+i)),
+    R: n(side+'_R'), H: n(side+'_H'), E: n(side+'_E')
+  });
+  return {
+    away: team('away'),
+    home: team('home'),
+    count: { balls: n('balls'), strikes: n('strikes'), outs: n('outs') },
+    bases: {
+      first: document.getElementById('b_first').checked,
+      second: document.getElementById('b_second').checked,
+      third: document.getElementById('b_third').checked
+    },
+    lineup: state.lineup.map((_, i) => ({
+      pos: v('lu_pos_'+i), name: v('lu_name_'+i), ops: v('lu_ops_'+i)
+    })),
+    currentBatterIndex: parseInt((document.querySelector('input[name="curbat"]:checked')||{}).value || '0', 10),
+    batter: {
+      number: v('bt_number'), first: v('bt_first'), last: v('bt_last'), pos: v('bt_pos'),
+      hometown: v('bt_hometown'), seasonHits: n('bt_hits'), seasonAtBats: n('bt_ab'),
+      avg: v('bt_avg'), hr: v('bt_hr'), rbi: v('bt_rbi'), r: v('bt_r'),
+      obp: v('bt_obp'), slg: v('bt_slg'), ops: v('bt_ops'), sb: v('bt_sb'),
+      walkupSong: v('bt_song'), walkupArtist: v('bt_artist')
+    },
+    extra: { MVR: v('mvr'), ABS: v('abs'), exitVel: v('exitvel') }
+  };
+}
+
+function flash(text, ok) {
+  const m = document.getElementById('msg');
+  m.textContent = text; m.className = 'msg ' + (ok ? 'ok' : 'err');
+  setTimeout(() => { m.textContent = ''; }, 4000);
+}
+
+function save() {
+  fetch('/api/state', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(collect())
+  }).then(r => r.json()).then(d => {
+    if (d.ok) flash('Saved \u2713 refresh the display', true);
+    else flash('Save failed', false);
+  }).catch(() => flash('Save failed', false));
+}
+
+function resetState() {
+  if (!confirm('Reset the scoreboard to the original seed values?')) return;
+  fetch('/api/reset', { method: 'POST' })
+    .then(r => r.json()).then(() => location.reload())
+    .catch(() => flash('Reset failed', false));
+}
+
+fetch('/api/state').then(r => r.json()).then(s => { state = s; render(); })
+  .catch(e => { document.getElementById('form').textContent = 'Failed to load: ' + e; });
+</script>
+</body>
+</html>
