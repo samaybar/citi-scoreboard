@@ -116,30 +116,73 @@ function applyLiveGame(state, game) {
   };
 }
 
-app.post('/api/live', requireAuth, async (req, res) => {
+// --- /api/live: public, but throttled and cached ---
+// Cache the last MLB result briefly so a burst of clicks shares one fetch,
+// and hard-cap how often we actually call MLB.
+let liveCache = { at: 0, payload: null };
+let liveInFlight = null;
+const LIVE_CACHE_MS = 10000;   // serve cached result for 10s
+const LIVE_MIN_GAP_MS = 8000;  // never call MLB more than once per 8s
+
+async function fetchMetsGame() {
   const date = todayEastern();
   const url = `https://statsapi.mlb.com/api/v1/schedule?sportId=1&teamId=${METS_TEAM_ID}` +
               `&date=${date}&hydrate=linescore,team`;
-  try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!r.ok) throw new Error(`MLB API responded ${r.status}`);
-    const data = await r.json();
-    const games = (data.dates && data.dates[0] && data.dates[0].games) || [];
-    if (games.length === 0) {
-      return res.status(404).json({ error: `No Mets game found for ${date}.` });
-    }
-    // If a doubleheader, prefer a live game, else the latest
-    const live = games.find(g => g.status &&
-      g.status.abstractGameState === 'Live');
-    const game = live || games[games.length - 1];
+  const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  if (!r.ok) throw new Error(`MLB API responded ${r.status}`);
+  const data = await r.json();
+  const games = (data.dates && data.dates[0] && data.dates[0].games) || [];
+  return { date, games };
+}
 
+app.post('/api/live', async (req, res) => {
+  const now = Date.now();
+
+  // Serve from cache if very recent
+  if (liveCache.payload && now - liveCache.at < LIVE_CACHE_MS) {
+    return res.json({ ...liveCache.payload, cached: true });
+  }
+  // Throttle: if a real MLB call happened very recently, reuse last payload
+  if (liveCache.payload && now - liveCache.at < LIVE_MIN_GAP_MS) {
+    return res.json({ ...liveCache.payload, cached: true });
+  }
+  // Coalesce concurrent requests onto a single in-flight fetch
+  if (liveInFlight) {
+    try {
+      const payload = await liveInFlight;
+      return res.json({ ...payload, cached: true });
+    } catch (err) {
+      return res.status(502).json({ error: 'Could not reach MLB: ' + err.message });
+    }
+  }
+
+  liveInFlight = (async () => {
+    const { date, games } = await fetchMetsGame();
+    if (games.length === 0) {
+      const e = new Error(`No Mets game found for ${date}.`);
+      e.code = 'NO_GAME';
+      throw e;
+    }
+    const live = games.find(g => g.status && g.status.abstractGameState === 'Live');
+    const game = live || games[games.length - 1];
     const updated = applyLiveGame(loadState(), game);
     saveState(updated);
-
     const status = (game.status && game.status.detailedState) || 'Unknown';
-    res.json({ ok: true, state: updated, gameStatus: status, date });
+    return { ok: true, state: updated, gameStatus: status, date };
+  })();
+
+  try {
+    const payload = await liveInFlight;
+    liveCache = { at: Date.now(), payload };
+    res.json(payload);
   } catch (err) {
-    res.status(502).json({ error: 'Could not reach MLB: ' + err.message });
+    if (err.code === 'NO_GAME') {
+      res.status(404).json({ error: err.message });
+    } else {
+      res.status(502).json({ error: 'Could not reach MLB: ' + err.message });
+    }
+  } finally {
+    liveInFlight = null;
   }
 });
 
