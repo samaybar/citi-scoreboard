@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scoreboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700;800&family=Saira:wght@400;600;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --navy: #0a2342;
+    --navy-2: #123059;
+    --panel: #0d2a4d;
+    --row: #11335e;
+    --row-alt: #0e2c52;
+    --red: #e8262d;
+    --orange: #f5821f;
+    --line: #1d4476;
+    --ink: #eaf1fb;
+    --dim: #8fa9c8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #04101f;
+    font-family: 'Saira', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .board {
+    width: 100%;
+    max-width: 1180px;
+    background: var(--navy);
+    border: 3px solid #02080f;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0,0,0,.7);
+  }
+  /* ---- top: lineup | art | batter ---- */
+  .top { display: grid; grid-template-columns: 1.05fr 1.1fr 1.25fr; }
+
+  /* lineup */
+  .lineup { background: var(--panel); padding: 8px 0; }
+  .lineup-head {
+    display: flex; justify-content: flex-end;
+    padding: 2px 14px 6px; color: var(--dim);
+    font-family: 'Saira Condensed', sans-serif;
+    font-weight: 700; letter-spacing: .08em; font-size: 13px;
+  }
+  .lrow {
+    display: grid; grid-template-columns: 34px 1fr auto;
+    align-items: center; gap: 8px;
+    padding: 6px 14px; background: var(--row);
+    border-bottom: 1px solid #0a2342;
+  }
+  .lrow:nth-child(even) { background: var(--row-alt); }
+  .lrow.active { background: var(--red); }
+  .lrow .pos {
+    font-family: 'Saira Condensed', sans-serif; font-weight: 700;
+    font-size: 13px; color: var(--dim);
+  }
+  .lrow.active .pos { color: #fff; }
+  .lrow .nm {
+    font-family: 'Saira Condensed', sans-serif; font-weight: 700;
+    font-size: 21px; letter-spacing: .01em;
+  }
+  .lrow .ops {
+    font-variant-numeric: tabular-nums; font-weight: 600;
+    font-size: 16px; color: var(--ink);
+  }
+
+  /* center art */
+  .art {
+    background: linear-gradient(160deg, #2a589c, #0b2952);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .art .crest {
+    font-family: 'Saira Condensed', sans-serif;
+    font-weight: 800; font-size: clamp(40px, 7vw, 96px);
+    color: rgba(255,255,255,.14); letter-spacing: .04em;
+    text-align: center; line-height: .95;
+  }
+
+  /* batter card */
+  .batter { background: var(--navy-2); padding: 10px 16px; }
+  .batter-top {
+    display: grid; grid-template-columns: auto 1fr auto;
+    align-items: start; gap: 8px;
+  }
+  .batter-top .bnum, .batter-top .bpos {
+    font-family: 'Saira Condensed', sans-serif;
+    font-weight: 800; font-size: 26px; color: var(--ink);
+  }
+  .batter-name { text-align: center; }
+  .batter-name .first {
+    font-family: 'Saira Condensed', sans-serif; font-weight: 600;
+    font-size: 15px; color: var(--ink); line-height: 1;
+  }
+  .batter-name .last {
+    font-family: 'Saira Condensed', sans-serif; font-weight: 800;
+    font-size: 38px; color: var(--red); line-height: .95;
+    text-transform: uppercase;
+  }
+  .hometown {
+    text-align: center; color: var(--dim);
+    font-size: 13px; padding: 4px 0 8px;
+    border-bottom: 1px solid var(--line);
+    font-family: 'Saira Condensed', sans-serif; font-weight: 600;
+  }
+  .count-row {
+    display: grid; grid-template-columns: auto auto 1fr;
+    align-items: center; gap: 14px; padding: 10px 0;
+  }
+  .bs {
+    font-family: 'Saira Condensed', sans-serif; font-weight: 800;
+    font-size: 30px; font-variant-numeric: tabular-nums;
+  }
+  .bases-mini { display: flex; gap: 6px; }
+  .dia {
+    width: 26px; height: 26px; transform: rotate(45deg);
+    border: 2px solid #3a6bb0; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .dia.on { background: var(--orange); border-color: var(--orange); }
+  .dia span {
+    transform: rotate(-45deg);
+    font-family: 'Saira Condensed', sans-serif; font-weight: 800;
+    font-size: 11px; color: #02101f;
+  }
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--line);
+    border: 1px solid var(--line); margin-top: 6px;
+  }
+  .stat-grid .lbl, .stat-grid .val {
+    background: var(--navy-2); text-align: center; padding: 4px 2px;
+  }
+  .stat-grid .lbl {
+    color: var(--dim); font-size: 12px; font-weight: 700;
+    font-family: 'Saira Condensed', sans-serif; letter-spacing: .05em;
+  }
+  .stat-grid .val {
+    font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums;
+  }
+  .walkup {
+    display: flex; align-items: center; gap: 8px;
+    padding-top: 8px; color: var(--ink);
+    font-family: 'Saira Condensed', sans-serif;
+  }
+  .walkup .ico { font-size: 16px; }
+  .walkup .song { font-weight: 700; font-size: 15px; }
+  .walkup .artist { color: var(--dim); font-size: 13px; }
+
+  /* ---- linescore ---- */
+  .line-wrap { background: var(--panel); padding: 6px 8px 10px; }
+  table.linescore {
+    width: 100%; border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  .linescore th {
+    color: var(--dim); font-family: 'Saira Condensed', sans-serif;
+    font-weight: 700; font-size: 14px; padding: 4px 0;
+    text-align: center;
+  }
+  .linescore td {
+    text-align: center; padding: 7px 0;
+    font-family: 'Saira Condensed', sans-serif; font-weight: 700;
+    font-size: 24px;
+  }
+  .linescore .team {
+    text-align: left; padding-left: 12px; font-size: 22px;
+    width: 96px; font-weight: 800;
+  }
+  .linescore .rcol {
+    background: var(--red); color: #fff;
+    font-size: 30px; font-weight: 800;
+  }
+  .linescore .he { font-size: 24px; }
+  .linescore tr.away td { border-bottom: 1px solid var(--line); }
+  .col-div { border-left: 2px solid var(--line); }
+
+  /* ---- sponsor strip ---- */
+  .strip {
+    background: var(--red); color: #fff; text-align: center;
+    padding: 10px; font-family: 'Saira Condensed', sans-serif;
+    font-weight: 800; font-size: clamp(16px, 2.4vw, 28px);
+    letter-spacing: .04em;
+  }
+  .footer {
+    text-align: center; padding: 10px;
+    color: var(--dim); font-size: 13px;
+  }
+  .footer a { color: var(--orange); text-decoration: none; }
+  @media (max-width: 760px) {
+    .top { grid-template-columns: 1fr; }
+    .art { min-height: 120px; }
+    .linescore .team { width: 70px; font-size: 18px; }
+    .linescore td { font-size: 18px; }
+    .linescore .rcol { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="board" id="board">Loading…</div>
+<script>
+  const esc = s => String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+  function basesHtml(bases) {
+    const d = (on, label) => `<div class="dia ${on ? 'on' : ''}"><span>${label}</span></div>`;
+    return `<div class="bases-mini">${d(bases.first,'1B')}${d(bases.second,'2B')}${d(bases.third,'3B')}</div>`;
+  }
+
+  function render(s) {
+    const innCount = Math.max(9, s.away.innings.length, s.home.innings.length);
+    let headCols = '';
+    for (let i = 1; i <= innCount; i++) headCols += `<th>${i}</th>`;
+
+    const innRow = (t) => {
+      let cells = '';
+      for (let i = 0; i < innCount; i++) cells += `<td>${esc(t.innings[i] || '')}</td>`;
+      return cells;
+    };
+
+    const lineupRows = s.lineup.map((p, i) => `
+      <div class="lrow ${i === s.currentBatterIndex ? 'active' : ''}">
+        <div class="pos">${esc(p.pos)}</div>
+        <div class="nm">${esc(p.name)}</div>
+        <div class="ops">${esc(p.ops)}</div>
+      </div>`).join('');
+
+    const b = s.batter;
+    document.getElementById('board').innerHTML = `
+      <div class="top">
+        <div class="lineup">
+          <div class="lineup-head">OPS</div>
+          ${lineupRows}
+        </div>
+        <div class="art"><div class="crest">${esc(s.home.code)}</div></div>
+        <div class="batter">
+          <div class="batter-top">
+            <div class="bnum">${esc(b.number)}</div>
+            <div class="batter-name">
+              <div class="first">${esc(b.first)}</div>
+              <div class="last">${esc(b.last)}</div>
+            </div>
+            <div class="bpos">${esc(b.pos)}</div>
+          </div>
+          <div class="hometown">${esc(b.hometown)}</div>
+          <div class="count-row">
+            <div class="bs">${esc(s.count.balls)}&ndash;${esc(s.count.strikes)}</div>
+            ${basesHtml(s.bases)}
+            <div style="text-align:right;color:var(--dim);font-family:'Saira Condensed';font-weight:700;">
+              ${esc(b.seasonHits)}-for-${esc(b.seasonAtBats)}
+            </div>
+          </div>
+          <div class="stat-grid">
+            <div class="lbl">AVG</div><div class="lbl">HR</div><div class="lbl">RBI</div><div class="lbl">R</div>
+            <div class="val">${esc(b.avg)}</div><div class="val">${esc(b.hr)}</div><div class="val">${esc(b.rbi)}</div><div class="val">${esc(b.r)}</div>
+            <div class="lbl">OBP</div><div class="lbl">SLG</div><div class="lbl">OPS</div><div class="lbl">SB</div>
+            <div class="val">${esc(b.obp)}</div><div class="val">${esc(b.slg)}</div><div class="val">${esc(b.ops)}</div><div class="val">${esc(b.sb)}</div>
+          </div>
+          <div class="walkup">
+            <span class="ico">&#128266;</span>
+            <span class="song">${esc(b.walkupSong)}</span>
+            <span class="artist">${esc(b.walkupArtist)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="line-wrap">
+        <table class="linescore">
+          <thead><tr>
+            <th class="team"></th>${headCols}
+            <th class="col-div">R</th><th>H</th><th>E</th>
+            <th class="col-div">MVR</th><th>ABS</th>
+          </tr></thead>
+          <tbody>
+            <tr class="away">
+              <td class="team">${esc(s.away.code)}</td>${innRow(s.away)}
+              <td class="rcol col-div">${esc(s.away.R)}</td><td class="he">${esc(s.away.H)}</td><td class="he">${esc(s.away.E)}</td>
+              <td class="he col-div">${esc(s.extra.MVR)}</td><td class="he">${esc(s.extra.ABS)}</td>
+            </tr>
+            <tr class="home">
+              <td class="team">${esc(s.home.code)}</td>${innRow(s.home)}
+              <td class="rcol col-div">${esc(s.home.R)}</td><td class="he">${esc(s.home.H)}</td><td class="he">${esc(s.home.E)}</td>
+              <td class="he col-div" style="color:var(--dim)">Outs ${esc(s.count.outs)}</td><td class="he"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="strip">TRADE ETFs, STOCKS &amp; OPTIONS</div>
+      <div class="footer">Manual refresh to update &middot; <a href="/control">Control panel</a></div>
+    `;
+  }
+
+  fetch('/api/state').then(r => r.json()).then(render).catch(e => {
+    document.getElementById('board').textContent = 'Failed to load: ' + e;
+  });
+</script>
+</body>
+</html>
